@@ -7,57 +7,52 @@ use Illuminate\Http\Request;
 
 class PatientController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+     public function index(Request $request)
     {
-        return Patient::all();
+            $query = Patient::query();
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")->orWhere('id', $search);
+            });
+        }
+        $patients = $query->orderBy('id', 'desc')->paginate(10);
+        return response()->json($patients);
     }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'date_of_birth' => 'required|date',
-            'address' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'medical_history' => 'nullable|string'
-        ]);
-
+        $validated = $request->validate(['name' => 'required|string|max:255', 'date_of_birth' => 'required|date', 'address' => 'required|string|max:255', 'phone' => 'nullable|string|max:20', 'medical_history' => 'nullable|string']);
         return Patient::create($validated);
     }
-
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
         $patient = Patient::findOrFail($id);
 
+        if (!$patient) {
+            return response()->json(["message" => "Patient not found"], 404);
+        }
+
         return $patient;
     }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
         $patient = Patient::findOrFail($id);
 
+        if (!$patient) {
+            return response()->json(["message" => "Patient not found"], 404);
+        }
+
         $patient->update($request->all());
         return response()->json($patient);
     }
-
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
         $patient = Patient::findOrFail($id);
+
+        if (!$patient) {
+            return response()->json(["message" => "Patient not found"], 404);
+        }
+
         $patient->delete();
         return response()->json(["message" => "Patient deleted successfully"], 200);
     }
